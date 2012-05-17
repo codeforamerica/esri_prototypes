@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Traffic Directions</title>
+
+    <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.8/js/dojo/dijit/themes/claro/claro.css">
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.8"></script>
+
+    <link rel="stylesheet" type="text/css" href="drive.css">
+    <link rel="stylesheet" type="text/css" href="drive_mobile.css" media="all and (max-width: 600px)" />
+    <script type="text/javascript" src="drive.js"></script>
+  </head>
+  <body class="claro">
+
+    <header>
+      <input type="text" id="fromTxf" value="650 South King St, Honolulu, HI" />
+      <input type="text" id="toTxf" value="1513 Halekoa, Honolulu, HI" />
+      <div class="btn" id="getdirections">Get&nbsp;Directions</div>
+    </header>
+    
+    <div id="map"></div>
+    
+    <div id="menu">
+      <div id="summary" class="segment"></div>
+      <div id="directions"></div>
+      <div id="cameras">
+        <h3>Cameras along Route</h3>
+      </div>
+    </div>
+
+  </body>
+</html>

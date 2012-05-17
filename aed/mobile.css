@@ -1,0 +1,53 @@
+div.header{ 
+  height:45px;
+  background:#fff;
+  border-bottom: solid 2px #000;
+  box-shadow: 5px 5px 5px #ccc;
+}
+
+@-webkit-keyframes pulse{
+  0%{opacity: 1.0;}
+  45%{opacity: .20;}
+  100%{opacity: 1.0;}
+}
+@-moz-keyframes pulse{
+  0%{opacity: 1.0;}
+  45%{opacity: .20;}
+  100%{opacity: 1.0;}
+}
+
+#map_graphics_layer
+{
+  -webkit-animation-duration: 3s;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-animation-name: pulse;
+  -moz-animation-duration: 3s;
+  -moz-animation-iteration-count: infinite;
+  -moz-animation-name: pulse;
+}
+#map{ 
+  height:100%;
+  width:100%;
+  position:absolute;
+  top:50px;
+}
+
+#modalMessage{ 
+  position:absolute;
+  top:0px;
+  left:0px;
+  height:100%;
+  width:100%;
+  z-index:10000;
+  display:none;
+}
+
+#addPointMessage{ 
+  width:80%;
+  height:80%;
+  margin:20px auto;
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  
+}

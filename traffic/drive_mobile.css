@@ -1,0 +1,28 @@
+div#getdirections{ 
+  float:right;
+}
+header{ 
+  height:120px;
+}
+header input{ 
+  width:80%;
+  margin-bottom:10px;
+}
+div#map{ 
+  height:250px;
+  width:100%;
+  position:relative;
+  left:0px;
+  top:135px;
+  right:0px;
+}
+div#menu{
+  position:relative;
+  width:330px;
+  margin:auto;
+  padding:0px;
+  border-top:solid 1px #999;
+  border-left:none;
+  min-height:300px;
+  top:135px;
+}

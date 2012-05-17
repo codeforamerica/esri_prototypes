@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>  
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Maps Toolbar</title>
+    <link href='http://serverapi.arcgisonline.com/jsapi/arcgis/2.8/js/dojo/dojox/mobile/themes/iPhone/iPhone.css' rel='stylesheet'>
+    <style type="text/css">
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <link rel="stylesheet" href="mobile.css" type="text/stylesheet" />
+    <link rel="stylesheet" href="bootstrap.min.css" type="text/stylesheet" />
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.8compact"></script>
+    <script type="text/javascript" src="mobile.js"></script>
+
+
+  </head>
+  
+  <body>
+    <div id="modalMessage">
+      <div id="addPointMessage">
+        <h2>Adding a new AED</h2>
+        <p>The AED will be placed at your current location, if that isnt the precise location of the AED, tap on it and then drag to move.</p>
+        <div class="btn btn-large" id="closeMessage">Ok</div>
+      </div>
+    </div>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="#">
+            AEDs
+          </a>
+          <div class="nav-collapse">
+            <div id="addPoint" class="btn btn-primary">Add</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </body>
+
+</html>
