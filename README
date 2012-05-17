@@ -1,0 +1,3 @@
+These are a couple of examples or prototypes of apps using the ESRI javascript API. 
+They require a proxy for some of the reqeusts to the ESRI REST API, you can run this via node app.js all prototypes assume that the proxy can be found at /proxy
+
