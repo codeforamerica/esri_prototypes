@@ -3,7 +3,8 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=7,IE=9" />
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"
+    />
     <title>Parcel Locator</title>
     <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.8/js/dojo/dijit/themes/claro/claro.css">
     <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.8/js/esri/dijit/css/Popup.css">
@@ -26,7 +27,7 @@
         parseOnLoad: true
       };
     </script>
-    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.8"></script>
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.8compact"></script>
     <script type="text/javascript">
       dojo.require("dijit.layout.BorderContainer");
       dojo.require("dijit.layout.ContentPane");
@@ -34,14 +35,21 @@
       dojo.require("esri.layers.FeatureLayer");
       dojo.require("esri.dijit.Popup");
       dojo.require("esri.tasks.closestfacility");
+      dojo.require("esri.tasks.locator");
       
       var map;
       var parking;
-		esri.config.defaults.io.proxyUrl = "/proxy";
+      var locator;
+      var closestFacilityTask, xwork;
+		esri.config.defaults.io.proxyUrl = "proxy.php";
 
       function init() {
         //apply a selection symbol that determines the symbology for selected features 
         var sfs = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([111, 0, 255]), 2), new dojo.Color([111, 0, 255, 0.15]));
+        closestFacilityTask = new esri.tasks.ClosestFacilityTask("http://sampleserver3.arcgisonline.com/ArcGIS/rest/services/Network/USA/NAServer/Closest Facility");
+        //new esri.tasks.ClosestFacilityTask("http://maps.esri.com/apl4/rest/services/CCH/StreetNetwork/NAServer/Closest Facility");
+
+        locator = new esri.tasks.Locator("http://tasks.arcgisonline.com/ArcGIS/rest/services/Locators/TA_Address_NA/GeocodeServer");
 
         var popup = new esri.dijit.Popup({
           fillSymbol: sfs
@@ -87,14 +95,25 @@
         parking.setSelectionSymbol(sfs);
 
 
-			var incidentPointSymbol = new esri.symbol.SimpleMarkerSymbol(
-				esri.symbol.SimpleMarkerSymbol.STYLE_CIRCLE, 
-				16,
-				new esri.symbol.SimpleLineSymbol(
-					esri.symbol.SimpleLineSymbol.STYLE_SOLID,
-					new dojo.Color([89,95,35]), 2
-				),
-				new dojo.Color([0,200,0,0.4]) );
+routeGraphicLayer = new esri.layers.GraphicsLayer();
+      
+      var routePolylineSymbol = new esri.symbol.SimpleLineSymbol(
+        esri.symbol.SimpleLineSymbol.STYLE_SOLID, 
+        new dojo.Color([100,0,200]), 
+        4.0
+      );
+      var routeRenderer = new esri.renderer.SimpleRenderer(routePolylineSymbol);
+      routeGraphicLayer.setRenderer(routeRenderer);
+
+      map.addLayer(routeGraphicLayer);
+
+			var incidentPointSymbol = new esri.symbol.PictureMarkerSymbol({
+                "url":"http://google-maps-icons.googlecode.com/files/parking.png",
+                "height":24,
+                "width":20,
+                "yoffset":12,
+                "type":"esriPMS"
+			});
 			incidentsGraphicsLayer = new esri.layers.GraphicsLayer();
 
 			var incidentsRenderer = new esri.renderer.SimpleRenderer(incidentPointSymbol);
@@ -106,23 +125,22 @@
           var query = new esri.tasks.Query();
           query.geometry = map.extent;
           var deferred = parking.queryFeatures(query, function(featureset){
-          	closestFacilityTask = new esri.tasks.ClosestFacilityTask("http://maps.esri.com/apl4/rest/services/CCH/StreetNetwork/NAServer/Closest Facility");
     		params = new esri.tasks.ClosestFacilityParameters();
-    		params.defaultCutoff= 3.0;
-    		params.returnIncidents=false;
+    		params.defaultCutoff= 300.0;
+    		params.returnIncidents=true;
     		params.returnRoutes=true;
-		    params.returnDirections=false;
-		    params.incidents = new esri.tasks.FeatureSet();
-		    params.incidents.features = [ featureset.features[0] ];
+		    params.returnDirections=true;
+		    params.outSpatialReference = map.spatialReference;
+		    var incidents = new esri.tasks.FeatureSet();
+		    incidents.features = [  new esri.Graphic( new esri.geometry.Point( e.mapPoint.x, e.mapPoint.y, map.spatialReference ) ) ];
+		    params.incidents = incidents;
 
-		    params.facilities = new esri.tasks.FeatureSet();
-
-		    params.facilities.features = featureset.features;
-
+		    var facilities = new esri.tasks.FeatureSet();
+			facilities.features = parking.graphics;
+			params.facilities = facilities;
 
 		    closestFacilityTask.solve(params,function(solveResult){
-		    	console.log(solveResult);
-        //var directions = solveResult.directions;
+        var directions = solveResult.directions;
         
         dojo.forEach(solveResult.routes, function(route, index){
           //build an array of route info
@@ -133,18 +151,13 @@
           
           route.setInfoTemplate(infoTemplate);
           route.setAttributes(attr);
-          
           routeGraphicLayer.add(route);
-          dojo.byId("directionsDiv").innerHTML = "Hover over the route to view directions";
-        });
-        
-		    });
-          });
-          //console.log(deferred.results[0][0]);
+          
+          console.log(route.geometry.paths[0][route.geometry.paths[0].length-1]);
           var minDistance = 1000000000000;
           var minPark = null;
           dojo.forEach(deferred.results[0].features, function(space){
-          	var distance = Math.pow(e.mapPoint.x - space.geometry.x, 2) + Math.pow(e.mapPoint.y - space.geometry.y, 2)
+          	var distance = Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][0] - space.geometry.x, 2) + Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][1] - space.geometry.y, 2)
           	if(distance < minDistance){
           		minDistance = distance;
           		minPark = space;
@@ -154,23 +167,169 @@
 			incidentsGraphicsLayer.clear();
 			incidentsGraphicsLayer.add(new esri.Graphic( new esri.geometry.Point( minPark.geometry.x,  minPark.geometry.y )));
 
+          
+          //map.extent = route.geometry.getExtent();
+        });
+        		    //xwork = solveResult.routes[0].geometry;
+		    });
+          });
+          //console.log(deferred.results[0][0]);
+
         });
 
-        map.addLayers([parking]);
+        map.addLayer(parking);
 
         dojo.connect(map, 'onLoad', function (theMap) {
           //resize the map when the browser resizes
           dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
         });
       }
+      
+      function geolocate(){
+
+		    navigator.geolocation.getCurrentPosition(function(position){
+		    	var mapPoint = new esri.geometry.Point(position.coords.longitude, position.coords.latitude);
+		    	mapPoint = esri.geometry.geographicToWebMercator(mapPoint);
+		    	map.setExtent( map.extent.centerAt(mapPoint) );
+
+          var query = new esri.tasks.Query();
+          query.geometry = map.extent.centerAt(mapPoint);
+          var deferred = parking.queryFeatures(query, function(featureset){
+    		params = new esri.tasks.ClosestFacilityParameters();
+    		params.defaultCutoff= 300.0;
+    		params.returnIncidents=true;
+    		params.returnRoutes=true;
+		    params.returnDirections=true;
+		    params.outSpatialReference = map.spatialReference;
+		    var incidents = new esri.tasks.FeatureSet();
+		    
+		    incidents.features = [  new esri.Graphic( new esri.geometry.Point( mapPoint.x, mapPoint.y, map.spatialReference ) ) ];
+		    params.incidents = incidents;
+
+		    var facilities = new esri.tasks.FeatureSet();
+			facilities.features = parking.graphics;
+			params.facilities = facilities;
+
+		    closestFacilityTask.solve(params,function(solveResult){
+        		var directions = solveResult.directions;
+        
+ 		       dojo.forEach(solveResult.routes, function(route, index){
+    		      //build an array of route info
+        		  var attr = dojo.map(solveResult.directions[index].features,function(feature){
+            		return feature.attributes.text;
+          		  });
+          			var infoTemplate = new esri.InfoTemplate("Attributes", "${*}");
+          
+          		//map.setExtent( route.geometry.extent, true );
+          
+          		route.setInfoTemplate(infoTemplate);
+          		route.setAttributes(attr);
+          		routeGraphicLayer.add(route);
+          
+          		//console.log(route.geometry.paths[0][route.geometry.paths[0].length-1]);
+          		var minDistance = 1000000000000;
+          		var minPark = null;
+          		dojo.forEach(deferred.results[0].features, function(space){
+          			var distance = Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][0] - space.geometry.x, 2) + Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][1] - space.geometry.y, 2)
+          			if(distance < minDistance){
+          				minDistance = distance;
+          				minPark = space;
+          			}
+          		});
+          //console.log(minPark);
+				incidentsGraphicsLayer.clear();
+				incidentsGraphicsLayer.add(new esri.Graphic( new esri.geometry.Point( minPark.geometry.x,  minPark.geometry.y )));
+
+          
+          //map.extent = route.geometry.getExtent();
+        	});
+        		    //xwork = solveResult.routes[0].geometry;
+		});		    	
+		    	
+		    }, function(){ });
+		    
+    });
+
+
+      }
+      
+function address(){
+
+          var query = new esri.tasks.Query();
+          query.geometry = map.extent;
+          var deferred = parking.queryFeatures(query, function(featureset){
+    		params = new esri.tasks.ClosestFacilityParameters();
+    		params.defaultCutoff= 300.0;
+    		params.returnIncidents=true;
+    		params.returnRoutes=true;
+		    params.returnDirections=true;
+		    params.outSpatialReference = map.spatialReference;
+		    var incidents = new esri.tasks.FeatureSet();
+
+	var fromArr = dojo.byId("fromaddress").value.split(","),
+            fromAddress = { Address:fromArr[0], City:"Honolulu", State:"HI" };
+    locator.addressToLocations(fromAddress, ["Loc_name"],
+		function(addressCandidates) {
+    		var mapPoint = addressCandidates[0].location;
+    		mapPoint = esri.geometry.geographicToWebMercator(mapPoint);
+		    map.setExtent( map.extent.centerAt(mapPoint) );
+		    
+		    incidents.features = [  new esri.Graphic( new esri.geometry.Point( mapPoint.x, mapPoint.y, map.spatialReference ) ) ];
+		    params.incidents = incidents;
+
+		    var facilities = new esri.tasks.FeatureSet();
+			facilities.features = parking.graphics;
+			params.facilities = facilities;
+
+		    closestFacilityTask.solve(params,function(solveResult){
+        		var directions = solveResult.directions;
+        
+ 		        dojo.forEach(solveResult.routes, function(route, index){
+    		      //build an array of route info
+        		  var attr = dojo.map(solveResult.directions[index].features,function(feature){
+            		return feature.attributes.text;
+          		  });
+          		  var infoTemplate = new esri.InfoTemplate("Attributes", "${*}");
+          
+          		  //map.setExtent( route.geometry.extent, true );
+          
+          		  route.setInfoTemplate(infoTemplate);
+          		  route.setAttributes(attr);
+          		  routeGraphicLayer.add(route);
+          
+          		  //console.log(route.geometry.paths[0][route.geometry.paths[0].length-1]);
+          		  var minDistance = 1000000000000;
+          		  var minPark = null;
+          		  dojo.forEach(deferred.results[0].features, function(space){
+          			  var distance = Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][0] - space.geometry.x, 2) + Math.pow(route.geometry.paths[0][route.geometry.paths[0].length-1][1] - space.geometry.y, 2)
+          			  if(distance < minDistance){
+          			  	  minDistance = distance;
+          				  minPark = space;
+          			  }
+          		  });
+          //console.log(minPark);
+				  incidentsGraphicsLayer.clear();
+				  incidentsGraphicsLayer.add(new esri.Graphic( new esri.geometry.Point( minPark.geometry.x,  minPark.geometry.y )));
+                  //map.extent = route.geometry.getExtent();
+        	   });
+		});
+	});		
+		});
+}
 
       dojo.addOnLoad(init);
     </script>
   </head>
   <body class="claro">
     <div dojotype="dijit.layout.BorderContainer" design="headline" gutters="false"
-    style="width: 100%; height: 100%; margin: 0;">
+    style="width: 100%; height: 90%; margin-top: 18pt;">
       <div id="map" dojotype="dijit.layout.ContentPane" region="center" style="border:1px solid #000;padding:0;"></div>
+    </div>
+    <div style="position:fixed;top:0;left:0;width:100%;height:18pt;">
+    	<input id="fromaddress" type="text" placeholder="Address" style="vertical-align:top;"/>
+    	<input type="button" value="Search" onclick="address()" style="vertical-align:top;"/>
+    	|
+    	<img src="http://www.khtml.org/osm/v0.83/images/geolocation.png" onclick="geolocate()" style="height:16pt;"/>
     </div>
   </body>
 </html>
